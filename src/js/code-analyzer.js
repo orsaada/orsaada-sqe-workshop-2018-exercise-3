@@ -78,9 +78,8 @@ function operation_firstIteraion(node, isBlock,boolColor){
 }
 
 function if_firstIteration(node,isBlock,boolColor,parent){
-    if(isBlock){
+    if(isBlock)
         graphString = graphString.concat(getColorString(boolColor));
-    }
     let exitCounter = ifCounter;
     graphString = graphString.concat('if' + (ifCounter++) + '=>condition: '+takeNumber() + escodegen.generate(node.test) + getColorString(boolColor)+'\n');
     nameOfBlocks.push('if' + (exitCounter));
@@ -98,9 +97,8 @@ function if_firstIteration_CheckParent(exitCounter,parent,boolColor){
 }
 
 function while_firstIteration(node,isBlock,boolColor){
-    if(isBlock){
+    if(isBlock)
         graphString = graphString.concat(getColorString(boolColor));
-    }
     graphString = graphString.concat('whileExit' + (whileCounter) + '=>operation: '+ takeNumber()+'NULL' + getColorString(boolColor)+'\n');
     nameOfBlocks.push('whileExit' + (whileCounter));
     nameOfBlocks.push('while' + (whileCounter));
@@ -126,9 +124,8 @@ function blockCheckOperationAndReturn_secondIteration(node, isBlock, i){
         isBlock = true;
         indexer++;
     }
-    else if(node.body[i].type === 'ReturnStatement'){
+    else if(node.body[i].type === 'ReturnStatement')
         block_return_secondIteration();
-    }
     return isBlock;
 }
 
