@@ -3,32 +3,24 @@ import * as flowchart from 'flowchart.js';
 
 let estraverse = require('estraverse');
 let escodegen = require('escodegen');
-let graphString = '';
 let blockCount = 1;
 let ifEvalTrue = [];
-let ifCounter =1;
-let arrowString = '', whileCounter = 1;
+let ifCounter =1, whileCounter = 1;
+let arrowString = '',graphString = '';
 let nameOfBlocks = [], indexer = 0, returnCounter =1;
+let numbers =0;
 
 const parseCode = (codeToParse) => {
     return esprima.parseScript(codeToParse,{loc : true});
 };
 
 function mainAnalyzer(parsedCode){
-    //body_manual(parsedCode.body[0].body.body,true); // first iteration
-    firstIteration(parsedCode,true,false);
-    console.log(ifEvalTrue);
-    console.log(graphString);
-    console.log(nameOfBlocks);
+    firstIteration(parsedCode,true,false); //graph string handler
     remove_unnecessary_strings(graphString);
-    console.log(graphString);
-    secondIteration(parsedCode,false,false,false);
-    console.log(arrowString);
+    secondIteration(parsedCode,false,false,false); //arrow string handler
     graphString = graphString.concat('\n').concat(arrowString);
     printCfgToScreen();
 }
-
-let numbers =0;
 
 function takeNumber(){
     return '     <'+(++numbers)+'>\n';
@@ -37,125 +29,165 @@ function takeNumber(){
 function firstIteration(parsedCode,boolColor,isBlock){
     if(parsedCode == null)
         return;
-    parsedCode = estraverse.replace(parsedCode, {
+    estraverse.replace(parsedCode, {
         enter: function (node,parent) {
-            if ((node.type === 'VariableDeclaration' || node.type === 'ExpressionStatement')) {
-                if (!isBlock) {
-                    getColorString(boolColor);
-                    graphString = graphString.concat('op' + blockCount + '=>operation: '+takeNumber());
-                    nameOfBlocks.push('op'+blockCount);
-                    blockCount++;
-                    isBlock = true;
-                }
-                graphString = graphString.concat(escodegen.generate(node) + '\n');
-            }
+            isBlock = checkOperationAndReturn_firstIteration(node,boolColor,isBlock);
             if (node.type === 'IfStatement') {
-                if(isBlock){
-                    graphString = graphString.concat(getColorString(boolColor));
-                    isBlock = false;
-                }
-                let exitCounter = ifCounter;
-                graphString = graphString.concat('if' + (ifCounter++) + '=>condition: '+takeNumber() + escodegen.generate(node.test) + getColorString(boolColor)+'\n');
-                nameOfBlocks.push('if' + (exitCounter));
-                let a = boolColor && ifEvalTrue.includes(ifCounter-1);
-                let b = boolColor && !ifEvalTrue.includes(ifCounter-1);
-                let savedIfCounter = ifCounter;
-                firstIteration(node.consequent, boolColor && ifEvalTrue.includes(ifCounter-1),false);
-                firstIteration(node.alternate, boolColor && !ifEvalTrue.includes(savedIfCounter-1),false);
-                if (parent !== null && parent.type === 'BlockStatement' && parent.body.length > 1) {
-                    graphString = graphString.concat('ifExit' + (exitCounter) + '=>start: \n' + getColorString(boolColor));
-                    nameOfBlocks.push('ifExit' + (exitCounter));
-                }
+                if_firstIteration(node,isBlock,boolColor,parent);
+                isBlock = false;
                 this.skip();
             }
-            else if (node.type === 'WhileStatement') {
-                if(isBlock){
-                    graphString = graphString.concat(getColorString(boolColor));
-                    isBlock = false;
-                }
-                graphString = graphString.concat('whileExit' + (whileCounter) + '=>operation: '+ takeNumber()+'NULL' + getColorString(boolColor)+'\n');
-                nameOfBlocks.push('whileExit' + (whileCounter));
-                nameOfBlocks.push('while' + (whileCounter));
-                graphString = graphString.concat('while' + (whileCounter++) + '=>condition: ' + escodegen.generate(node.test) + getColorString(boolColor));
-                firstIteration(node.body, boolColor,false);
+            if (node.type === 'WhileStatement') {
+                while_firstIteration(node,isBlock,boolColor);
+                isBlock = false;
                 this.skip();
-            }
-            if (node.type === 'ReturnStatement') {
-                if(isBlock){
-                    graphString = graphString.concat(getColorString(boolColor));
-                    isBlock = false;
-                }
-                graphString = graphString.concat('return' + (returnCounter) + '=>operation: '+takeNumber() + escodegen.generate(node) + getColorString(boolColor));
-                nameOfBlocks.push('return' + (returnCounter++));
             }
         }
     });
-    if(isBlock) {
+    isBlock ? graphString = graphString.concat(getColorString(boolColor)) : nothin();
+}
+
+function checkOperationAndReturn_firstIteration(node,boolColor,isBlock){
+    if ((node.type === 'VariableDeclaration' || node.type === 'ExpressionStatement')) {
+        isBlock = operation_firstIteraion(node, isBlock,boolColor);
+    }
+    if (node.type === 'ReturnStatement') {
+        return_firstIteration(node,isBlock,boolColor);
+        isBlock = false;
+    }
+    return isBlock;
+}
+
+function return_firstIteration(node,isBlock,boolColor){
+    if(isBlock){
         graphString = graphString.concat(getColorString(boolColor));
     }
+    graphString = graphString.concat('return' + (returnCounter) + '=>operation: '+takeNumber() + escodegen.generate(node) + getColorString(boolColor));
+    nameOfBlocks.push('return' + (returnCounter++));
+}
+
+function operation_firstIteraion(node, isBlock,boolColor){
+    if (!isBlock) {
+        getColorString(boolColor);
+        graphString = graphString.concat('op' + blockCount + '=>operation: '+takeNumber());
+        nameOfBlocks.push('op'+blockCount);
+        blockCount++;
+        isBlock = true;
+    }
+    graphString = graphString.concat(escodegen.generate(node) + '\n');
+    return isBlock;
+}
+
+function if_firstIteration(node,isBlock,boolColor,parent){
+    if(isBlock){
+        graphString = graphString.concat(getColorString(boolColor));
+    }
+    let exitCounter = ifCounter;
+    graphString = graphString.concat('if' + (ifCounter++) + '=>condition: '+takeNumber() + escodegen.generate(node.test) + getColorString(boolColor)+'\n');
+    nameOfBlocks.push('if' + (exitCounter));
+    let savedIfCounter = ifCounter;
+    firstIteration(node.consequent, boolColor && ifEvalTrue.includes(ifCounter-1),false);
+    firstIteration(node.alternate, boolColor && !ifEvalTrue.includes(savedIfCounter-1),false);
+    if_firstIteration_CheckParent(exitCounter,parent,boolColor);
+}
+
+function if_firstIteration_CheckParent(exitCounter,parent,boolColor){
+    if (parent !== null && parent.type === 'BlockStatement' && parent.body.length > 1) {
+        graphString = graphString.concat('ifExit' + (exitCounter) + '=>start: \n' + getColorString(boolColor));
+        nameOfBlocks.push('ifExit' + (exitCounter));
+    }
+}
+
+function while_firstIteration(node,isBlock,boolColor){
+    if(isBlock){
+        graphString = graphString.concat(getColorString(boolColor));
+    }
+    graphString = graphString.concat('whileExit' + (whileCounter) + '=>operation: '+ takeNumber()+'NULL' + getColorString(boolColor)+'\n');
+    nameOfBlocks.push('whileExit' + (whileCounter));
+    nameOfBlocks.push('while' + (whileCounter));
+    graphString = graphString.concat('while' + (whileCounter++) + '=>condition: ' + escodegen.generate(node.test) + getColorString(boolColor));
+    firstIteration(node.body, boolColor,false);
+}
+
+function block_secondIteration(node,isBlock){
+    for (let i = 0; i < node.body.length; i++) {
+        isBlock = blockCheckOperationAndReturn_secondIteration(node, isBlock, i);
+        if(node.body[i].type === 'IfStatement'){
+            isBlock = block_if_secondIteration(node,isBlock,i);
+        }
+        else if(node.body[i].type === 'WhileStatement'){
+            block_while_secondIteration(node,isBlock,i);
+            isBlock = false;
+        }
+    }
+}
+
+function blockCheckOperationAndReturn_secondIteration(node, isBlock, i){
+    if((node.body[i].type === 'VariableDeclaration' || node.body[i].type === 'ExpressionStatement') && !isBlock ){
+        isBlock = true;
+        indexer++;
+    }
+    else if(node.body[i].type === 'ReturnStatement'){
+        block_return_secondIteration();
+    }
+    return isBlock;
+}
+
+function block_return_secondIteration(){
+    if(!arrowString.includes('return'))
+        addReturnArrow(indexer);
+    indexer++;
+}
+
+function block_while_secondIteration(node,isBlock,i){
+    if(isBlock === true)
+        addArrow(nameOfBlocks[indexer-1],nameOfBlocks[indexer]);
+    addArrow(nameOfBlocks[indexer],nameOfBlocks[++indexer]);
+    let whileIndex = indexer;
+    addArrow(nameOfBlocks[indexer]+'(yes)', nameOfBlocks[++indexer]);
+    secondIteration(node.body[i].body,false,false,true);
+    addArrow(nameOfBlocks[whileIndex]+'(no)',nameOfBlocks[indexer]);
+}
+
+function block_if_secondIteration(node,isBlock,i){
+    if(isBlock === true){
+        addArrow(nameOfBlocks[indexer-1],nameOfBlocks[indexer]);
+        isBlock = false;
+    }
+    let index1= indexer;
+    addArrow(nameOfBlocks[indexer]+'(yes)',nameOfBlocks[indexer+1]);
+    indexer++;
+    secondIteration(node.body[i].consequent,false,true,false);
+    addArrow(nameOfBlocks[index1]+'(no)',nameOfBlocks[indexer]);
+    secondIteration(node.body[i].alternate,false,true,false);
+    return isBlock;
 }
 
 function secondIteration(parsedCode,isBlock,isIfExit,isWhileExit){
     if(parsedCode == null) // probably problem
         return;
-    parsedCode = estraverse.replace(parsedCode, {
+    estraverse.replace(parsedCode, {
         enter: function (node) {
-            if(nameOfBlocks[indexer].includes('ifExit')){
-                addArrow(nameOfBlocks[indexer],nameOfBlocks[++indexer]);
-            }
+            checkIfExitArrow_secondIteration();
             if (node.type === 'BlockStatement') {
-                for (let i = 0; i < node.body.length; i++) {
-                    if((node.body[i].type === 'VariableDeclaration' || node.body[i].type === 'ExpressionStatement') && !isBlock ){
-                        if(!isBlock){
-                            isBlock = true;
-                            indexer++;
-                        }
-                    }
-                    if(node.body[i].type === 'IfStatement'){
-                        if(isBlock === true){
-                            addArrow(nameOfBlocks[indexer-1],nameOfBlocks[indexer]);
-                            isBlock = false;
-                        }
-                        let index1= indexer;
-                        addArrow(nameOfBlocks[indexer]+'(yes)',nameOfBlocks[indexer+1]);
-
-                        indexer++;
-                        secondIteration(node.body[i].consequent,false,true,false);
-                        addArrow(nameOfBlocks[index1]+'(no)',nameOfBlocks[indexer]);
-                        secondIteration(node.body[i].alternate,false,true,false);
-                        this.skip();
-                    }
-                    else if(node.body[i].type === 'WhileStatement'){
-                        if(isBlock === true){
-                            addArrow(nameOfBlocks[indexer-1],nameOfBlocks[indexer]);
-                            isBlock = false;
-                        }
-                        let indexNull = indexer;
-                        addArrow(nameOfBlocks[indexer],nameOfBlocks[++indexer]);
-                        let whileIndex = indexer;
-                        addArrow(nameOfBlocks[indexer]+'(yes)', nameOfBlocks[++indexer]);
-                        secondIteration(node.body[i].body,false,false,true);
-                        addArrow(nameOfBlocks[whileIndex]+'(no)',nameOfBlocks[indexer]);
-                        isBlock = false;
-                    }
-                    else if(node.body[i].type === 'ReturnStatement'){
-                        if(!arrowString.includes('return'))
-                            addReturnArrow(indexer);
-                        indexer++;
-                    }
-                }
+                block_secondIteration(node,isBlock);
                 this.skip();
             }
-            if(node.type === 'IfStatement'){
-                secondIteration({type:'BlockStatement',body:[node]},false,isIfExit,isWhileExit);
-                this.skip();
-            }
-            if(node.type === 'WhileStatement'){
+            if(node.type === 'IfStatement' || node.type === 'WhileStatement' || node.type === 'ReturnStatement'){
                 secondIteration({type:'BlockStatement',body:[node]},false,isIfExit,isWhileExit);
                 this.skip();
             }
         }
     });
+    addExitArrows(isIfExit,isWhileExit);
+}
+
+function checkIfExitArrow_secondIteration(){
+    if(nameOfBlocks[indexer].includes('ifExit'))
+        addArrow(nameOfBlocks[indexer],nameOfBlocks[++indexer]);
+}
+
+function addExitArrows(isIfExit,isWhileExit){
     if(isIfExit && !nameOfBlocks[indexer-1].includes('if')){
         addArrow(nameOfBlocks[indexer-1],findIfExit(indexer));
     }
@@ -179,6 +211,72 @@ function getColorString(boolColor){
     return ('|F\n');
 }
 
+function printCfgToScreen(){
+    let diagram = flowchart.parse(graphString);
+    diagram.drawSVG('diagram', options);
+}
+
+const options = {
+    'x': 0,
+    'y': 0,
+    'line-width': 3,
+    'line-length': 50,
+    'text-margin': 10,
+    'font-size': 14,
+    'font-color': 'black',
+    'line-color': 'black',
+    'element-color': 'black',
+    'fill': 'white',
+    'yes-text': 'yes',
+    'no-text': 'no',
+    'arrow-end': 'block',
+    'scale': 1,
+    // style symbol types
+    'symbols': {
+        'start': {
+            'font-color': 'red',
+            'element-color': 'green',
+            'fill': 'yellow'
+        },
+        'end':{
+            'class': 'end-element'
+        }
+    },
+    'flowstate' : {
+        'F' : { 'fill' : '#ffffff', 'font-size' : 12, 'yes-text' : 'T', 'no-text' : 'F' },
+        'T' : { 'fill' : '#70c48e', 'font-size' : 12, 'yes-text' : 'T', 'no-text' : 'F' },
+    }
+};
+
+function addReturnArrow(indexo){
+    for(let i =indexo;i<nameOfBlocks.length;i++){
+        if(nameOfBlocks[i].includes('return'))
+            addArrow(nameOfBlocks[i-1],nameOfBlocks[i]);
+    }
+}
+function findIfExit(indexo){
+    for(let i =indexo;i<nameOfBlocks.length;i++){
+        if(nameOfBlocks[i].includes('ifExit'))
+            return nameOfBlocks[i];
+    }
+}
+
+function findWhileExit(indexo){
+    for(let i =indexo;i>=0;i--){
+        if(nameOfBlocks[i].includes('whileExit'))
+            return nameOfBlocks[i];
+    }
+}
+
+export {parseCode,symbolic_sub, evaluateCode, params_values,mainAnalyzer,setValues,escodegen};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////              Project 2:            //////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
+
+
+let params = [], values = [],params_values = [];
+
 function copy_array(table){
     let newTable = [];
     for(let i=0;i<table.length;++i){
@@ -186,8 +284,6 @@ function copy_array(table){
     }
     return newTable;
 }
-
-let params = [], values = [],params_values = [];
 
 function setValues(inputValues){
     values = inputValues;
@@ -210,6 +306,7 @@ function symbolic_sub(parsedCode){ //main symbolic subtitution (global and funct
     intialize_parameters(func);
     return inside_function_sub(func ,table);
 }
+
 
 function intialize_parameters(func){
     params_values = [];
@@ -361,8 +458,7 @@ function sub_return_handle(tree,table){
     });
 }
 
-function evaluateCode(parsedCode,linesColor){
-    let ifCounter = 0;
+function replaceIdentifier_eval(parsedCode){
     estraverse.replace(parsedCode, {
         enter: function (node) {
             if(node.type === 'Identifier'){
@@ -372,21 +468,28 @@ function evaluateCode(parsedCode,linesColor){
             }
         }
     });
+}
+function countIf_eval(parsedCode,linesColor){
+    let ifCounts = 0;
     estraverse.replace(parsedCode, {
         enter: function (node) {
             if(node.type === 'IfStatement'){
                 let x = eval(escodegen.generate(node.test));
-                ifCounter++;
-                x ? ifEvalTrue.push(ifCounter) : nothin();
+                ifCounts++;
+                x ? ifEvalTrue.push(ifCounts) : nothin();
                 x ? linesColor.push({line : node.test.loc.start.line -1,color: 'green'}) : linesColor.push({line : node.test.loc.start.line -1,color: 'red'});
             }
         }
     });
+}
+
+function evaluateCode(parsedCode,linesColor){
+    replaceIdentifier_eval(parsedCode);
+    countIf_eval(parsedCode,linesColor);
     return linesColor;
 }
 
-function nothin(){
-}
+function nothin(){}
 
 function getParamIndex(node){
     let name;
@@ -399,69 +502,4 @@ function getParamIndex(node){
             return i;
     }
     return -1;
-}
-
-export {parseCode,symbolic_sub, evaluateCode, params_values,mainAnalyzer,setValues,escodegen};
-
-function printCfgToScreen(){
-    let diagram = flowchart.parse(graphString);
-    diagram.drawSVG('diagram', options);
-}
-
-const options = {
-    'x': 0,
-    'y': 0,
-    'line-width': 3,
-    'line-length': 50,
-    'text-margin': 10,
-    'font-size': 14,
-    'font-color': 'black',
-    'line-color': 'black',
-    'element-color': 'black',
-    'fill': 'white',
-    'yes-text': 'yes',
-    'no-text': 'no',
-    'arrow-end': 'block',
-    'scale': 1,
-    // style symbol types
-    'symbols': {
-        'start': {
-            'font-color': 'red',
-            'element-color': 'green',
-            'fill': 'yellow'
-        },
-        'end':{
-            'class': 'end-element'
-        }
-    },
-    // even flowstate support ;-)
-    'flowstate' : {
-        //'past' : { 'fill' : '#CCCCCC', 'font-size' : 12},
-        // 'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
-        // 'future' : { 'fill' : '#FFFF99'},
-        //  'request' : { 'fill' : 'blue'},
-        'F' : { 'fill' : '#ffffff', 'font-size' : 12, 'yes-text' : 'T', 'no-text' : 'F' },
-        'T' : { 'fill' : '#70c48e', 'font-size' : 12, 'yes-text' : 'T', 'no-text' : 'F' },
-        // 'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
-    }
-};
-
-function addReturnArrow(indexo){
-    for(let i =indexo;i<nameOfBlocks.length;i++){
-        if(nameOfBlocks[i].includes('return'))
-            addArrow(nameOfBlocks[i-1],nameOfBlocks[i]);
-    }
-}
-function findIfExit(indexo){
-    for(let i =indexo;i<nameOfBlocks.length;i++){
-        if(nameOfBlocks[i].includes('ifExit'))
-            return nameOfBlocks[i];
-    }
-}
-
-function findWhileExit(indexo){
-    for(let i =indexo;i>=0;i--){
-        if(nameOfBlocks[i].includes('whileExit'))
-            return nameOfBlocks[i];
-    }
 }

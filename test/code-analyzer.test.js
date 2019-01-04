@@ -17,10 +17,6 @@ describe('The javascript parser', () => {
     });
 });
 
-
-
-
-
 let func_a = 'function foo(x, y, z){\n' +
     '    let a = x + 1;\n' +
     '    let b = a + y;\n' +
