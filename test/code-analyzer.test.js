@@ -16,3 +16,25 @@ describe('The javascript parser', () => {
         );
     });
 });
+
+
+
+
+
+let func_a = 'function foo(x, y, z){\n' +
+    '    let a = x + 1;\n' +
+    '    let b = a + y;\n' +
+    '    let c = 0;\n' +
+    '    \n' +
+    '    if (b < z) {\n' +
+    '        c = c + 5;\n' +
+    '    } else if (b < z * 2) {\n' +
+    '        c = c + x + 5;\n' +
+    '    } else {\n' +
+    '        c = c + z + 5;\n' +
+    '    }\n' +
+    '    \n' +
+    '    return c;\n' +
+    '}\n';
+let func_b = '';
+let func_c = '';

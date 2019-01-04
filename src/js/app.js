@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import {parseCode,mainAnalyzer,symbolic_sub,escodegen,evaluateCode,setValues} from './code-analyzer';
+import {parseCode,mainAnalyzer,escodegen,symbolic_sub,evaluateCode,setValues} from './code-analyzer';
 
 $(document).ready(function () {
     $('#codeSubmissionButton').click(() => {
