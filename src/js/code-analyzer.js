@@ -3,12 +3,11 @@ import * as flowchart from 'flowchart.js';
 
 let estraverse = require('estraverse');
 let escodegen = require('escodegen');
-let blockCount = 1;
+let blockCount = 1,ifCounter =1, whileCounter = 1;
 let ifEvalTrue = [];
-let ifCounter =1, whileCounter = 1;
 let arrowString = '',graphString = '';
 let nameOfBlocks = [], indexer = 0, returnCounter =1;
-let numbers =0;
+let numbers = 0;
 
 const parseCode = (codeToParse) => {
     return esprima.parseScript(codeToParse,{loc : true});
