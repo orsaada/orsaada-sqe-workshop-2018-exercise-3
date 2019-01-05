@@ -1,11 +1,10 @@
 import * as esprima from 'esprima';
-import * as flowchart from 'flowchart.js';
 
 let estraverse = require('estraverse');
 let escodegen = require('escodegen');
 let blockCount = 1,ifCounter =1, whileCounter = 1;
 let ifEvalTrue = [];
-let arrowString = '',graphString = '';
+let arrowString = '',graphString = '',allString = '';
 let nameOfBlocks = [], indexer = 0, returnCounter =1;
 let numbers = 0;
 
@@ -14,11 +13,15 @@ const parseCode = (codeToParse) => {
 };
 
 function mainAnalyzer(parsedCode){
+    arrowString = ''; graphString = '';indexer = 0; nameOfBlocks = [];
+    returnCounter =1; ifCounter = 1; blockCount =1 ; numbers = 0; whileCounter =1;
     firstIteration(parsedCode,true,false); //graph string handler
     remove_unnecessary_strings(graphString);
+    console.log(graphString);
     secondIteration(parsedCode,false,false,false); //arrow string handler
-    graphString = graphString.concat('\n').concat(arrowString);
-    printCfgToScreen();
+    console.log(arrowString);
+    allString = graphString.concat('\n').concat(arrowString);
+    //   printCfgToScreen(graphString);
 }
 
 function takeNumber(){
@@ -32,7 +35,7 @@ function firstIteration(parsedCode,boolColor,isBlock){
         enter: function (node,parent) {
             isBlock = checkOperationAndReturn_firstIteration(node,boolColor,isBlock);
             if (node.type === 'IfStatement') {
-                if_firstIteration(node,isBlock,boolColor,parent);
+                boolColor = if_firstIteration(node,isBlock,boolColor,parent);
                 isBlock = false;
                 this.skip();
             }
@@ -84,9 +87,11 @@ function if_firstIteration(node,isBlock,boolColor,parent){
     graphString = graphString.concat('if' + (ifCounter++) + '=>condition: '+takeNumber() + escodegen.generate(node.test) + getColorString(boolColor)+'\n');
     nameOfBlocks.push('if' + (exitCounter));
     let savedIfCounter = ifCounter;
+    let savedBoolColor = boolColor;
     firstIteration(node.consequent, boolColor && ifEvalTrue.includes(ifCounter-1),false);
-    firstIteration(node.alternate, boolColor && !ifEvalTrue.includes(savedIfCounter-1),false);
-    if_firstIteration_CheckParent(exitCounter,parent,boolColor);
+    firstIteration(node.alternate, savedBoolColor && !ifEvalTrue.includes(savedIfCounter-1),false);
+    if_firstIteration_CheckParent(exitCounter,parent,savedBoolColor);
+    return savedBoolColor;
 }
 
 function if_firstIteration_CheckParent(exitCounter,parent,boolColor){
@@ -102,7 +107,7 @@ function while_firstIteration(node,isBlock,boolColor){
     graphString = graphString.concat('whileExit' + (whileCounter) + '=>operation: '+ takeNumber()+'NULL' + getColorString(boolColor)+'\n');
     nameOfBlocks.push('whileExit' + (whileCounter));
     nameOfBlocks.push('while' + (whileCounter));
-    graphString = graphString.concat('while' + (whileCounter++) + '=>condition: ' + escodegen.generate(node.test) + getColorString(boolColor));
+    graphString = graphString.concat('while' + (whileCounter++) + '=>condition: ' +takeNumber()+ escodegen.generate(node.test) + getColorString(boolColor));
     firstIteration(node.body, boolColor,false);
 }
 
@@ -179,7 +184,7 @@ function secondIteration(parsedCode,isBlock,isIfExit,isWhileExit){
 }
 
 function checkIfExitArrow_secondIteration(){
-    if(nameOfBlocks[indexer].includes('ifExit'))
+    if(indexer !== nameOfBlocks.length && nameOfBlocks[indexer].includes('ifExit'))
         addArrow(nameOfBlocks[indexer],nameOfBlocks[++indexer]);
 }
 
@@ -198,6 +203,11 @@ function remove_unnecessary_strings(){
 }
 
 function addArrow(from,to){
+    if(indexer >= nameOfBlocks.length){
+        graphString = graphString.concat('end=>start:'+takeNumber()+ '|T');
+        arrowString = arrowString.concat(from+'->end\n');
+        return;
+    }
     arrowString = arrowString.concat(from+'->'+to +'\n');
 }
 
@@ -206,43 +216,6 @@ function getColorString(boolColor){
         return ('|T\n');
     return ('|F\n');
 }
-
-function printCfgToScreen(){
-    let diagram = flowchart.parse(graphString);
-    diagram.drawSVG('diagram', options);
-}
-
-const options = {
-    'x': 0,
-    'y': 0,
-    'line-width': 3,
-    'line-length': 50,
-    'text-margin': 10,
-    'font-size': 14,
-    'font-color': 'black',
-    'line-color': 'black',
-    'element-color': 'black',
-    'fill': 'white',
-    'yes-text': 'yes',
-    'no-text': 'no',
-    'arrow-end': 'block',
-    'scale': 1,
-    // style symbol types
-    'symbols': {
-        'start': {
-            'font-color': 'red',
-            'element-color': 'green',
-            'fill': 'yellow'
-        },
-        'end':{
-            'class': 'end-element'
-        }
-    },
-    'flowstate' : {
-        'F' : { 'fill' : '#ffffff', 'font-size' : 12, 'yes-text' : 'T', 'no-text' : 'F' },
-        'T' : { 'fill' : '#70c48e', 'font-size' : 12, 'yes-text' : 'T', 'no-text' : 'F' },
-    }
-};
 
 function addReturnArrow(indexo){
     for(let i =indexo;i<nameOfBlocks.length;i++){
@@ -259,12 +232,25 @@ function findIfExit(indexo){
 
 function findWhileExit(indexo){
     for(let i =indexo;i>=0;i--){
-        if(nameOfBlocks[i].includes('whileExit'))
+        if(typeof nameOfBlocks[i] !== 'undefined' && nameOfBlocks[i].includes('whileExit'))
             return nameOfBlocks[i];
     }
 }
 
-export {parseCode,symbolic_sub, evaluateCode, params_values,mainAnalyzer,setValues,escodegen};
+function getAllString(){
+    return allString;
+}
+function getGraphString(){
+    return graphString;
+}
+
+function getArrowString(){
+    return arrowString;
+}
+
+export {parseCode,symbolic_sub, evaluateCode,
+    params_values,mainAnalyzer,setValues,escodegen,
+    getAllString,getGraphString,getArrowString};
 
 /////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////              Project 2:            //////////////////////////////
@@ -282,6 +268,8 @@ function copy_array(table){
 }
 
 function setValues(inputValues){
+    graphString = '';
+    arrowString = '';
     values = inputValues;
 }
 
@@ -465,6 +453,7 @@ function replaceIdentifier_eval(parsedCode){
         }
     });
 }
+
 function countIf_eval(parsedCode,linesColor){
     let ifCounts = 0;
     estraverse.replace(parsedCode, {
