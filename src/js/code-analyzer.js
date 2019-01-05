@@ -17,9 +17,9 @@ function mainAnalyzer(parsedCode){
     returnCounter =1; ifCounter = 1; blockCount =1 ; numbers = 0; whileCounter =1;
     firstIteration(parsedCode,true,false); //graph string handler
     remove_unnecessary_strings(graphString);
-    console.log(graphString);
+    //console.log(graphString);
     secondIteration(parsedCode,false,false,false); //arrow string handler
-    console.log(arrowString);
+    // console.log(arrowString);
     allString = graphString.concat('\n').concat(arrowString);
     //   printCfgToScreen(graphString);
 }
