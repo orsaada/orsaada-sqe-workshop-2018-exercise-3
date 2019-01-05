@@ -186,14 +186,8 @@ let func_a_arrows = 'op1->if1\n' +
     'op4->ifExit1\n' +
     'ifExit1->return1\n';
 
-let func_b_proj3 = 'function foo(x, y, z){\n' +
-    '    let a = x + 1;\n' +
-    '    let b = a + y;\n' +
-    '    let c = 0;\n' +
-    '    \n' +
-    '    if (b < z) {\n' +
-    '        c = 2;\n' +
-    '        if(c>3){\n' +
+let func_b_proj3 = 'function foo(x, y, z){\n' + '    let a = x + 1;\n' + '    let b = a + y;\n' +
+    '    let c = 0;\n' + '    \n' + '    if (b < z) {\n' + '        c = 2;\n' + '        if(c>3){\n' +
     '           c=8;\n' +
     '        }\n' +
     '    } else if (b < z * 2) {\n' +
