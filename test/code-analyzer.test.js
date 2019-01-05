@@ -3,7 +3,7 @@ import {
     parseCode,
     mainAnalyzer,
     getGraphString,
-    setValues, getArrowString,symbolic_sub,evaluateCode
+    setValues, getArrowString, symbolic_sub, evaluateCode, getAllString
 } from '../src/js/code-analyzer';
 
 describe('func_a', () => {
@@ -30,6 +30,7 @@ describe('func_b', () => {
         setValues(parsedParams.body[0].expression.expressions);
         mainAnalyzer(parseCode(func_b_proj3));
         let graphString = getGraphString();
+        getAllString();
         assert.equal(
             graphString, func_b_graph
         );
