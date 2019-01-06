@@ -9,7 +9,6 @@ $(document).ready(function () {
         $('#parsedCode').val(JSON.stringify(parsedCode, null, 2));
         let parameters = $('#parameters').val();
         let arrayParams = params_handle(parameters);
-        console.log(arrayParams);
         setValues(arrayParams);
         parsedCode = symbolic_sub(parsedCode);
         let codeAfterSub = escodegen.generate(parsedCode);
